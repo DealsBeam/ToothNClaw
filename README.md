@@ -28,7 +28,7 @@
 
 <img width="1920" height="1200" alt="Heroshot_ColorRemaster" src="https://github.com/user-attachments/assets/cedf8565-39e8-44ee-b553-26fff7752bcd" />
 
-- Next-gen LunarLake/PantherLaken sharpness: Unlock Intel Adaptive Sharpening — a novel feature by Intel that enhances blurred or upscaled content for a crisper, more detailed image while preserving natural textures.
+- Next-gen LunarLake/PantherLake sharpness: Unlock Intel Adaptive Sharpening — a novel feature by Intel that enhances blurred or upscaled content for a crisper, more detailed image while preserving natural textures.
 - Adaptive Sharpening is Efficient and smart: Runs entirely on Intel’s display engine block — no GPU load, no performance hit, and minimal power draw.
 
 <img width="1920" height="1200" alt="Intel_Adaptive_sharpening" src="https://github.com/user-attachments/assets/4093ed32-2707-4a0d-9420-096902a8c04b" />

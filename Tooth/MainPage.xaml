@@ -427,7 +427,157 @@
                         </ComboBoxItem>
                     </ComboBox>
                 </StackPanel>
-                
+
+                <!-- Advanced CPU Tweaks Header -->
+                <TextBlock Text="Advanced CPU Tweaks"
+                           FontSize="18"
+                           FontWeight="Bold"
+                           Margin="0,20,0,10"/>
+                <Border
+                            Margin="0,6,0,0"
+                            CornerRadius="8"
+                            Background="#30343A"
+                            BorderBrush="#50555C"
+                            BorderThickness="1"
+                            Padding="8">
+                    <StackPanel Orientation="Vertical" Spacing="4" Margin="0,10,0,10">
+                    <!-- Processor Scheduling Policy -->
+                    <StackPanel Orientation="Vertical" Spacing="4" Margin="0,0,0,10">
+                        <TextBlock x:Name="ProcessorSchedulingPolicyTextBlock" 
+                        Text="Processor Scheduling Policy"
+                               FontSize="18"
+                               FontWeight="Bold"
+                               Margin="0,0,0,10"/>
+
+                        <ComboBox x:Name="ProcessorSchedulingPolicySelector"
+                              SelectedValue="{Binding SchedulingPolicy, Mode=TwoWay}"
+                              SelectedValuePath="Tag"
+                              HorizontalAlignment="Stretch"
+                              FontSize="18"
+                              Height="40"
+                              Margin="5,0,5,0"
+                              SelectionChanged="ProcessorSchedulingPolicySelector_SelectionChanged"
+                              XYFocusUp="{x:Bind LowLatencyComboBox}" 
+                              XYFocusDown="{x:Bind PCoresFreqSlider}">
+
+                            <!-- Dropdown Items -->
+                            <ComboBoxItem Content="	All Cores - Auto" IsSelected="True" >
+                                <ComboBoxItem.Tag>
+                                    <x:Double>0</x:Double>
+                                </ComboBoxItem.Tag>
+                            </ComboBoxItem>
+
+                            <ComboBoxItem Content="All Cores - Prefer P-Cores"  >
+                                <ComboBoxItem.Tag>
+                                    <x:Double>1</x:Double>
+                                </ComboBoxItem.Tag>
+                            </ComboBoxItem>
+
+                            <ComboBoxItem Content="All Cores - Prefer E-Cores"  >
+                                <ComboBoxItem.Tag>
+                                    <x:Double>2</x:Double>
+                                </ComboBoxItem.Tag>
+                            </ComboBoxItem>
+
+                            <ComboBoxItem Content="Only P-Cores" >
+                                <ComboBoxItem.Tag>
+                                    <x:Double>3</x:Double>
+                                </ComboBoxItem.Tag>
+                            </ComboBoxItem>
+
+                            <ComboBoxItem Content="Only E-Cores" >
+                                <ComboBoxItem.Tag>
+                                    <x:Double>4</x:Double>
+                                </ComboBoxItem.Tag>
+                            </ComboBoxItem>
+
+                        </ComboBox>
+                    </StackPanel>
+
+                    <!-- P Cores Freq Slider Panel -->
+                    <StackPanel Orientation="Vertical" Spacing="4" Margin="0,10,0,10">
+
+                            <TextBlock
+                               Text="Performance cores max frequency (MHz)"
+                               FontSize="18"
+                               FontWeight="Bold"
+                               Margin="0,0,0,10"/>
+                        
+                            <Grid x:Name="PCoresFreqSliderPanel" >
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="187*"/>
+                                <ColumnDefinition Width="1*"/>
+                                <ColumnDefinition Width="125"/>
+                            </Grid.ColumnDefinitions>
+
+                            <Slider x:Name="PCoresFreqSlider"
+                                    Grid.Column="0"
+                                    Margin="5,0,10,0"
+                                    Minimum="{Binding MinPCoreFreq}"
+                                    Maximum="{Binding MaxPCoreFreq}"
+                                    StepFrequency="100"
+                                    TickFrequency="100"
+                                    SnapsTo="Ticks"
+                                    Value="{Binding PCoreFreq, Mode=TwoWay}"
+                                    XYFocusUp="{x:Bind ProcessorSchedulingPolicySelector}"
+                                    XYFocusDown="{x:Bind ECoresFreqSlider}"/>
+                            <muxc:NumberBox x:Name="PCoresFreqValueBox"
+                                            Grid.Column="2"
+                                            Value="{Binding PCoreFreq, Mode=TwoWay}"
+                                            Minimum="{Binding MinPCoreFreq}"
+                                            Maximum="{Binding MaxPCoreFreq}"
+                                            SmallChange="100"
+                                            SpinButtonPlacementMode="Compact"
+                                            HorizontalAlignment="Left"
+                                            VerticalAlignment="Center"
+                                            FontSize="18"
+                                            Height="40"
+                                            Margin="10,0,0,0" Width="115"/>
+                        </Grid>
+                    </StackPanel>
+
+                    <!-- E Cores Freq Slider Panel -->
+                    <StackPanel Orientation="Vertical" Spacing="4" Margin="0,10,0,10">
+                            <TextBlock
+                               Text="Efficient cores max frequency (MHz)"
+                               FontSize="18"
+                               FontWeight="Bold"
+                               Margin="0,0,0,10"/>
+                        
+                            <Grid x:Name="ECoresFreqSliderPanel" >
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="187*"/>
+                                <ColumnDefinition Width="1*"/>
+                                <ColumnDefinition Width="125"/>
+                            </Grid.ColumnDefinitions>
+
+                            <Slider x:Name="ECoresFreqSlider"
+                                    Grid.Column="0"
+                                    Margin="5,0,10,0"
+                                    Minimum="{Binding MinECoreFreq}"
+                                    Maximum="{Binding MaxECoreFreq}"
+                                    StepFrequency="100"
+                                    TickFrequency="100"
+                                    SnapsTo="Ticks"
+                                    Value="{Binding ECoreFreq, Mode=TwoWay}"
+                                    XYFocusUp="{x:Bind PCoresFreqSliderPanel}"/>
+
+                            <muxc:NumberBox x:Name="ECoresFreqValueBox"
+                                            Grid.Column="2"
+                                            Value="{Binding ECoreFreq, Mode=TwoWay}"
+                                            Minimum="{Binding MinECoreFreq}"
+                                            Maximum="{Binding MaxECoreFreq}"
+                                            SmallChange="100"
+                                            SpinButtonPlacementMode="Compact"
+                                            HorizontalAlignment="Left"
+                                            VerticalAlignment="Center"
+                                            FontSize="18"
+                                            Height="40"
+                                            Margin="10,0,0,0" Width="115"/>
+                        </Grid>
+                    </StackPanel>
+                    </StackPanel>
+                </Border>
             </StackPanel>
         </ScrollViewer>
     </Grid>

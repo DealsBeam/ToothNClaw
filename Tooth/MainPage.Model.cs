@@ -613,6 +613,135 @@ namespace Tooth
             }
         }
 
+
+        public double SchedulingPolicy
+        {
+            get { lock (_base) { return _base.schedulingPolicy; } }
+            set
+            {
+                lock (_base)
+                {
+                    if (_base.schedulingPolicy != value)
+                    {
+                        _base.schedulingPolicy = value;
+                        _base.Notify("SchedulingPolicy");
+                        Backend.Instance.Send($"set-scheduling-policy {value}");
+                    }
+                }
+            }
+        }
+
+        public void SetSchedulingPolicyVar(double value)
+        {
+            lock (_base)
+            {
+                if (_base.schedulingPolicy != value)
+                {
+                    _base.schedulingPolicy = value;
+                    Backend.Instance.Send($"set-scheduling-policy {value}");
+                    _base.Notify("SchedulingPolicy");
+                }
+            }
+        }
+
+        public double MinPCoreFreq
+        {
+            get { lock (_base) { return _base.minPCoreFreq; } }
+            set
+            {
+                lock (_base)
+                {
+                    if (_base.minPCoreFreq != value)
+                    {
+                        _base.minPCoreFreq = value;
+
+                        _base.Notify("MinPCoreFreq");
+                    }
+                }
+            }
+        }
+        public double MaxPCoreFreq
+        {
+            get { lock (_base) { return _base.maxPCoreFreq; } }
+            set
+            {
+                lock (_base)
+                {
+                    if (_base.maxPCoreFreq != value)
+                    {
+                        _base.maxPCoreFreq = value;
+                        _base.Notify("MaxPCoreFreq");
+                    }
+                }
+            }
+        }
+
+        public double PCoreFreq
+        {
+            get { lock (_base) { return _base.pCoreFreq; } }
+            set
+            {
+                lock (_base)
+                {
+                    if (_base.pCoreFreq != value)
+                    {
+                        _base.pCoreFreq = value;
+                        _base.Notify("PCoreFreq");
+                        Backend.Instance.Send($"set-p-core-freq {value}");
+                    }
+                }
+            }
+        }
+
+        public double MinECoreFreq
+        {
+            get { lock (_base) { return _base.minECoreFreq; } }
+            set
+            {
+                lock (_base)
+                {
+                    if (_base.minECoreFreq != value)
+                    {
+                        _base.minECoreFreq = value;
+
+                        _base.Notify("MinECoreFreq");
+                    }
+                }
+            }
+        }
+        public double MaxECoreFreq
+        {
+            get { lock (_base) { return _base.maxECoreFreq; } }
+            set
+            {
+                lock (_base)
+                {
+                    if (_base.maxECoreFreq != value)
+                    {
+                        _base.maxECoreFreq = value;
+                        _base.Notify("MaxECoreFreq");
+                    }
+                }
+            }
+        }
+
+        public double ECoreFreq
+        {
+            get { lock (_base) { return _base.eCoreFreq; } }
+            set
+            {
+                lock (_base)
+                {
+                    if (_base.eCoreFreq != value)
+                    {
+                        _base.eCoreFreq = value;
+                        _base.Notify("ECoreFreq");
+                        Backend.Instance.Send($"set-e-core-freq {value}");
+                    }
+                }
+            }
+        }
+
         public event PropertyChangedEventHandler PropertyChanged;
 
 		public async Task Notify(string propertyName)
@@ -649,6 +778,15 @@ namespace Tooth
         public int deviceScaling = 0;  // 0: Display Scaling, 1: Gpu Scaling, 2: Retro Scaling
         public int gpuScalingMode = 0;  // 0: Maintain Aspect Ratio, 1: Stretch, 2: Center
         public int retroScalingMode = 0; // 0: Integer Scaling, 1: Nearest neighbour
+        public double schedulingPolicy = 0; // 0: All Auto, 1: Prefer P Cores, 2: Prefer E Cores, 3: Only P Cores, 4: Only E Cores
+
+        public double minPCoreFreq = 800;
+        public double maxPCoreFreq = 5100;
+        public double pCoreFreq = 5100;
+
+        public double minECoreFreq = 800;
+        public double maxECoreFreq = 3800;
+        public double eCoreFreq = 3800;
 
         private List<MainPageModelWrapper> _wrappers = new List<MainPageModelWrapper>();
 

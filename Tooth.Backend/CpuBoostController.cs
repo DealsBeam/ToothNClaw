@@ -1,9 +1,93 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Threading;
+using Windows.UI.Xaml.Controls;
 
 namespace Tooth.Backend
 {
+
+    public enum SchedulingPolicyMode
+    {
+        AllCoresAuto,
+        AllCoresPrefPCore,
+        AllCoresPrefECore,
+        OnlyPCore,
+        OnlyECore
+    }
+
+    public readonly struct HeterogeneousPolicySet
+    {
+        public readonly uint Policy;
+        public readonly uint ThreadPolicy;
+        public readonly uint ShortThreadPolicy;
+
+        public HeterogeneousPolicySet(uint policy, uint threadPolicy, uint shortThreadPolicy)
+        {
+            Policy = policy;
+            ThreadPolicy = threadPolicy;
+            ShortThreadPolicy = shortThreadPolicy;
+        }
+    }
+
+    public static class SchedulingPolicyMappings
+    {
+        public static readonly Dictionary<SchedulingPolicyMode, HeterogeneousPolicySet> Map =
+            new Dictionary<SchedulingPolicyMode, HeterogeneousPolicySet>
+            {
+            // Default Windows behavior
+            {
+                SchedulingPolicyMode.AllCoresAuto,
+                new HeterogeneousPolicySet(
+                    0U, // HETEROGENEOUS_POLICY = Default
+                    5U, // THREAD = No preference
+                    5U  // SHORT = No preference
+                )
+            },
+
+            // Mixed cores but prefer P-cores
+            {
+                SchedulingPolicyMode.AllCoresPrefPCore,
+                new HeterogeneousPolicySet(
+                    1U, // Allow mixed, but scheduling hints matter
+                    2U, // Prefer P
+                    2U  // Prefer P
+                )
+            },
+
+            // Mixed cores but prefer E-cores
+            {
+                SchedulingPolicyMode.AllCoresPrefECore,
+                new HeterogeneousPolicySet(
+                    1U, // Allow mixed
+                    4U, // Prefer E
+                    4U  // Prefer E
+                )
+            },
+
+            // Lock to P-cores only
+            {
+                SchedulingPolicyMode.OnlyPCore,
+                new HeterogeneousPolicySet(
+                    3U, // FORCE P-cores only
+                    1U, // Strongly P
+                    1U  // Strongly P
+                )
+            },
+
+            // Lock to E-cores only
+            {
+                SchedulingPolicyMode.OnlyECore,
+                new HeterogeneousPolicySet(
+                    2U, // FORCE E-cores only
+                    3U, // Strongly E
+                    3U  // Strongly E
+                )
+            },
+            };
+    }
+
     public class CpuBoostController : IDisposable
     {
         public enum BoostMode
@@ -19,7 +103,19 @@ namespace Tooth.Backend
         }
 
         private static readonly Guid ProcessorGroupGuidConst = new("54533251-82be-4824-96c1-47b60b740d00");
+
+        // CPU Boost setting
         private static readonly Guid BoostSettingGuidConst = new("be337238-0d82-4146-a960-4f3749d470c7");
+
+        // Max frequency (MHz)
+        private static readonly Guid EcoreMaxFreqGuidConst = new("75b0ae3f-bce0-45a7-8c89-c9611c25e100");  // PROCFREQMAX
+        private static readonly Guid PcoreMaxFreqGuidConst = new("75b0ae3f-bce0-45a7-8c89-c9611c25e101");  // PROCFREQMAX1
+
+        // Scheduling policy
+        private static readonly Guid CPUSchedulePolicyGuidConst = new ("7f2f5cfa-f10c-4823-b5e1-e93ae85f46b5");
+        public static Guid LongThreadSchedulePolicyGuidConst = new Guid("93b8b6dc-0698-4d1c-9ee4-0644e900c85d");
+        public static Guid ShortThreadSchedulePolicyGuidConst = new Guid("bae08b81-2d5e-4688-ad6a-13243356654b");
+
 
         private bool disposedValue;
 
@@ -64,6 +160,46 @@ namespace Tooth.Backend
 
         [DllImport("kernel32.dll")]
         private static extern IntPtr LocalFree(IntPtr hMem);
+
+        private Timer _enforceTimer;
+        private uint _expectedPcoreMax;
+        private uint _expectedEcoreMax;
+
+        private int _isTimerRunning = 0; // prevents overlap
+
+
+        public CpuBoostController()
+        {
+            _expectedPcoreMax = SettingsManager.Get<uint>("MaxPCoresFrequency");
+            _expectedEcoreMax = SettingsManager.Get<uint>("MaxECoresFrequency");
+
+            // relaxed interval: 3 second (3000 ms)
+            _enforceTimer = new Timer(TimerCallback, null, 3000, 3000);
+        }
+
+        private void TimerCallback(object state)
+        {
+            // Prevent overlapping timer ticks
+            if (Interlocked.Exchange(ref _isTimerRunning, 1) == 1)
+                return;
+
+            try
+            {
+                _expectedPcoreMax = SettingsManager.Get<uint>("MaxPCoresFrequency");
+                _expectedEcoreMax = SettingsManager.Get<uint>("MaxECoresFrequency");
+
+                SetMaxPCoresFrequency(_expectedPcoreMax);
+                SetMaxECoresFrequency(_expectedEcoreMax);
+            }
+            catch
+            {
+                // swallow to avoid timer crash — logging is optional
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _isTimerRunning, 0);
+            }
+        }
 
         public void SetBoostMode(BoostMode mode)
         {
@@ -143,10 +279,125 @@ namespace Tooth.Backend
             return schemeGuid;
         }
 
+        public void SetMaxPCoresFrequency(uint frequency)
+        {
+            var schemeGuid = GetActiveScheme();
+            var subgroupGuid = ProcessorGroupGuidConst;
+            var settingGuid = PcoreMaxFreqGuidConst;
+
+            if (frequency != _expectedPcoreMax)
+            {
+                SettingsManager.Set("MaxPCoresFrequency", frequency);
+                _expectedPcoreMax = SettingsManager.Get<uint>("MaxPCoresFrequency");
+            }
+
+            PowerWriteACValueIndex(IntPtr.Zero, ref schemeGuid, ref subgroupGuid, ref settingGuid, frequency);
+            PowerWriteDCValueIndex(IntPtr.Zero, ref schemeGuid, ref subgroupGuid, ref settingGuid, frequency);
+            PowerSetActiveScheme(IntPtr.Zero, ref schemeGuid);
+        }
+
+        public uint GetMaxPCoresFrequency()
+        {
+            var schemeGuid = GetActiveScheme();
+            var subgroupGuid = ProcessorGroupGuidConst;
+            var settingGuid = PcoreMaxFreqGuidConst;
+
+            PowerReadACValueIndex(IntPtr.Zero, ref schemeGuid, ref subgroupGuid, ref settingGuid, out uint val);
+            Console.WriteLine($"[CPU Boost Controller] Responding with E Core Max Freq {val}");
+
+            return val;
+        }
+
+        public void SetMaxECoresFrequency(uint frequency)
+        {
+            var schemeGuid = GetActiveScheme();
+            var subgroupGuid = ProcessorGroupGuidConst;
+            var settingGuid = EcoreMaxFreqGuidConst;
+
+            if (frequency != _expectedEcoreMax) { 
+                SettingsManager.Set("MaxECoresFrequency", frequency);
+                _expectedEcoreMax = SettingsManager.Get<uint>("MaxECoresFrequency"); ;
+            }
+
+            PowerWriteACValueIndex(IntPtr.Zero, ref schemeGuid, ref subgroupGuid, ref settingGuid, frequency);
+            PowerWriteDCValueIndex(IntPtr.Zero, ref schemeGuid, ref subgroupGuid, ref settingGuid, frequency);
+            PowerSetActiveScheme(IntPtr.Zero, ref schemeGuid);
+        }
+
+        public uint GetMaxECoresFrequency()
+        {
+            var schemeGuid = GetActiveScheme();
+            var subgroupGuid = ProcessorGroupGuidConst;
+            var settingGuid = EcoreMaxFreqGuidConst;
+
+            PowerReadACValueIndex(IntPtr.Zero, ref schemeGuid, ref subgroupGuid, ref settingGuid, out uint val);
+            return val;
+        }
+
+        private void WritePowerValue(Guid scheme, Guid subgroup, Guid setting, uint value)
+        {
+            uint result;
+
+            // Write AC value
+            result = PowerWriteACValueIndex(IntPtr.Zero, ref scheme,
+                                            ref subgroup, ref setting, value);
+            if (result != 0)
+                throw new InvalidOperationException($"PowerWriteACValueIndex failed: 0x{result:X}");
+
+            // Write DC value
+            result = PowerWriteDCValueIndex(IntPtr.Zero, ref scheme,
+                                            ref subgroup, ref setting, value);
+            if (result != 0)
+                throw new InvalidOperationException($"PowerWriteDCValueIndex failed: 0x{result:X}");
+        }
+
+        public void RequestSchedulingPolicyMode(SchedulingPolicyMode mode)
+        {
+            // 1. Get current active power scheme
+            if (PowerGetActiveScheme(IntPtr.Zero, out IntPtr activeSchemePtr) != 0)
+                throw new InvalidOperationException("Failed to obtain active power scheme.");
+
+            try
+            {
+                Guid activeScheme = Marshal.PtrToStructure<Guid>(activeSchemePtr);
+
+                // Get value set for this mode
+                var set = SchedulingPolicyMappings.Map[mode];
+
+                // 2. Apply all 3 settings (AC/DC identical)
+                WritePowerValue(activeScheme, ProcessorGroupGuidConst, CPUSchedulePolicyGuidConst, set.Policy);
+                WritePowerValue(activeScheme, ProcessorGroupGuidConst, LongThreadSchedulePolicyGuidConst, set.ThreadPolicy);
+                WritePowerValue(activeScheme, ProcessorGroupGuidConst, ShortThreadSchedulePolicyGuidConst, set.ShortThreadPolicy);
+
+                // 3. Apply (write) scheme to system
+                var result = PowerSetActiveScheme(IntPtr.Zero, ref activeScheme);
+                if (result != 0)
+                    throw new InvalidOperationException($"Failed to set active scheme: {result}");
+
+                Console.WriteLine("Scheduling Policy Mode {0} has been applied", mode);
+            }
+            finally
+            {
+                // Free pointer returned by PowerGetActiveScheme
+                if (activeSchemePtr != IntPtr.Zero)
+                    LocalFree(activeSchemePtr);
+            }
+        }
+
+        public SchedulingPolicyMode getSchedulingPolicyMode()
+        {
+            return SchedulingPolicyMode.AllCoresAuto;
+        }
+
         protected virtual void Dispose(bool disposing)
         {
             if (!disposedValue)
             {
+                if (disposing)
+                {
+                    _enforceTimer?.Dispose();
+                }
+
                 disposedValue = true;
             }
         }
