@@ -1,21 +1,22 @@
 ﻿using SharpDX;
+using SharpDX.Direct3D9;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.Eventing.Reader;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Tooth.GraphicsProcessingUnit;
 using Tooth.IGCL;
 using Windows.Storage;
 using Windows.System;
 using Windows.UI.Xaml.Controls;
-using System.Text.Json;
 using static Tooth.Backend.DisplayController;
 using static Tooth.GraphicsProcessingUnit.IntelGPU;
 using static Tooth.IGCL.IGCLBackend;
-using System.Diagnostics.Eventing.Reader;
 
 
 namespace Tooth.Backend
@@ -46,7 +47,13 @@ namespace Tooth.Backend
         {
             cpuBoostController = new CpuBoostController();
             intelGPUController = new IntelGPU();
-		}
+
+            Console.WriteLine($"[Server Handler] MotherboardInfo CPU ID: {MotherboardInfo.ProcessorID} , CPU Name: {MotherboardInfo.ProcessorName}");
+            Console.WriteLine($"[Server Handler] MotherboardInfo Product {MotherboardInfo.Product} , SystemName: {MotherboardInfo.Model}");
+            Console.WriteLine($"[Server Handler] MotherboardInfo MAX CPU Clock Speed {MotherboardInfo.ProcessorMaxClockSpeed}");
+            Console.WriteLine($"[Server Handler] MotherboardInfo MAX CPU P Core Clock Speed {MotherboardInfo.ProcessorMaxPCoreSpeed}");
+            Console.WriteLine($"[Server Handler] MotherboardInfo MAX CPU E Core Clock Speed {MotherboardInfo.ProcessorMaxECoreSpeed}");
+        }
 
         public void Register(Communication comm)
         {
@@ -597,6 +604,7 @@ namespace Tooth.Backend
                     break;
                 case "get-Scaling":
                     {
+                        /*
                         if (intelGPUController == null)
                         {
                             intelGPUController = new IntelGPU();
@@ -645,6 +653,11 @@ namespace Tooth.Backend
                                     break;
                             }
                         }
+                        */
+
+                        int scalingMode = SettingsManager.Get<int>("ScalingMode");
+                        Console.WriteLine($"[Server Handler] Responding with Scaling Mode {scalingMode}");
+                        (sender as Communication).Send($"Scaling" + ' ' + $"{scalingMode}");
                     }
                     break;
 
@@ -659,6 +672,7 @@ namespace Tooth.Backend
                         // Set GPU Scaling
                         int scaling = int.Parse(args[1]);
                         Console.WriteLine($"[Server Handler] Setting Scaling Value Received is {args[1]}");
+                        SettingsManager.Set("ScalingMode", scaling);
                         switch (scaling)
                         {
                             case (int)ScalingModeMethod.DISPLAY_SCALING_MAINTAIN_ASPECT_RATIO:
@@ -739,6 +753,97 @@ namespace Tooth.Backend
                                 Console.WriteLine($"[Server Handler] Wrong Arg value: Setting GPU Scaling to {args[1]}");
                                 break;
                         }
+                    }
+                    break;
+
+                case "get-scheduling-policy":
+                    {
+                        int schedulingPolicy = Convert.ToInt32(SettingsManager.Get<int>("SchedulingPolicy"));
+
+                        Console.WriteLine($"[Server Handler] Responding with scheduling policy {schedulingPolicy}");
+
+                        (sender as Communication).Send("scheduling-policy" + ' ' + schedulingPolicy);
+                    }
+                    break;
+                case "set-scheduling-policy":
+                    {
+                        if (cpuBoostController == null)
+                        {
+                            cpuBoostController = new CpuBoostController();
+                        }
+                        Console.WriteLine($"[Server Handler] Setting scheduling policy to {args[1]}");
+                        if (Enum.TryParse(args[1], out SchedulingPolicyMode mode))
+                        {
+                            cpuBoostController.RequestSchedulingPolicyMode(mode);
+                        }
+                        else
+                        {
+                            Console.WriteLine($"[Server Handler] Invalid scheduling policy: {args[1]}");
+                        }
+                    }
+                    break;
+
+                case "get-p-core-max-freq":
+                    {
+                        int maxFreq = Convert.ToInt32(MotherboardInfo.ProcessorMaxPCoreSpeed);
+                        Console.WriteLine($"[Server Handler] Responding with P Core Max Freq {maxFreq}");
+
+                        (sender as Communication).Send("p-core-max-freq" + ' ' + maxFreq);
+                    }
+                    break;
+
+                case "get-e-core-max-freq":
+                    {
+                        int maxFreq = Convert.ToInt32(MotherboardInfo.ProcessorMaxECoreSpeed);
+                        Console.WriteLine($"[Server Handler] Responding with E Core Max Freq {maxFreq}");
+
+                        (sender as Communication).Send("e-core-max-freq" + ' ' + maxFreq);
+                    }
+                    break;
+
+                case "get-p-core-freq":
+                    {
+                        if (cpuBoostController == null)
+                        {
+                            cpuBoostController = new CpuBoostController();
+                        }
+                        int freq = Convert.ToInt32(SettingsManager.Get<uint>("MaxPCoresFrequency"));
+                        Console.WriteLine($"[Server Handler] Responding with P Core Frequency {freq.ToString()}");
+
+                        (sender as Communication).Send("p-core-freq" + ' ' + freq);
+                    }
+                    break;
+                case "set-p-core-freq":
+                    {
+                        if (cpuBoostController == null)
+                        {
+                            cpuBoostController = new CpuBoostController();
+                        }
+                        Console.WriteLine($"[Server Handler] Setting P Core Freq to {args[1]}");
+
+                        uint uValue = Convert.ToUInt32(args[1]);
+                        cpuBoostController.SetMaxPCoresFrequency(uValue);
+                    }
+                    break;
+
+                case "get-e-core-freq":
+                    {
+                        int freq = Convert.ToInt32(SettingsManager.Get<uint>("MaxECoresFrequency"));
+                        Console.WriteLine($"[Server Handler] Responding with E Core Frequency {freq.ToString()}");
+
+                        (sender as Communication).Send("e-core-freq" + ' ' + freq);
+                    }
+                    break;
+                case "set-e-core-freq":
+                    {
+                        if (cpuBoostController == null)
+                        {
+                            cpuBoostController = new CpuBoostController();
+                        }
+                        Console.WriteLine($"[Server Handler] Setting E Core Freq to {args[1]}");
+
+                        uint uValue = Convert.ToUInt32(args[1]);
+                        cpuBoostController.SetMaxECoresFrequency(uValue);
                     }
                     break;
                 default:

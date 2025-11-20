@@ -15,7 +15,11 @@ namespace Tooth.Backend
             { "Brightness", 50.0 },
             { "Gamma", 1.0 },
             { "Hue", 0.0 },
-            { "Saturation", 50.0 }
+            { "Saturation", 50.0 },
+            { "ScalingMode", 0},
+            { "MaxPCoresFrequency", (uint)5100 },
+            { "MaxECoresFrequency", (uint)3800 },
+            { "SchedulingPolicy", 0 },
         };
 
         /// <summary>
@@ -31,7 +35,7 @@ namespace Tooth.Backend
                     localSettings.Values[kvp.Key] = kvp.Value;
                 } else
                 {
-                    Console.WriteLine($"[SettingsManager] Value is found for key: {kvp.Key} and Value is: {kvp.Value}");
+                    Console.WriteLine($"[SettingsManager] Value is found for key: {kvp.Key} and Value is: {localSettings.Values[kvp.Key]}");
                 }
             }
         }

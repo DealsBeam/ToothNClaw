@@ -71,6 +71,11 @@ namespace Tooth
             Backend.Instance.Send("get-Frame-Sync-Mode");
             Backend.Instance.Send("get-Low-Latency-Mode");
             Backend.Instance.Send("get-Scaling");
+            Backend.Instance.Send("get-scheduling-policy");
+            Backend.Instance.Send("get-p-core-max-freq");
+            Backend.Instance.Send("get-e-core-max-freq");
+            Backend.Instance.Send("get-p-core-freq");
+            Backend.Instance.Send("get-e-core-freq");
             Backend.Instance.Send("init");
         }
 
@@ -223,6 +228,33 @@ namespace Tooth
                         Trace.WriteLine($"Failed to parse resolutions: {ex.Message}");
                     }
 
+                    break;
+
+                case "scheduling-policy":
+                    Trace.WriteLine($"[MainPage.xaml.cs] Updating UI scheduling policy {args[1]}");
+                    _model.SchedulingPolicy = double.Parse(args[1]);
+
+                    ProcessorSchedulingPolicySelector.SelectedValue = _model.SchedulingPolicy;
+                    break;
+
+                case "p-core-max-freq":
+                    Trace.WriteLine($"[MainPage.xaml.cs] Updating UI Max P Core Frequency {args[1]}");
+                    _model.MaxPCoreFreq = double.Parse(args[1]);
+                    break;
+                case "e-core-max-freq":
+                    Trace.WriteLine($"[MainPage.xaml.cs] Updating UI Max E Core Frequency {args[1]}");
+                    _model.MaxECoreFreq = double.Parse(args[1]);
+                    break;
+
+                case "p-core-freq":
+                    Trace.WriteLine($"[MainPage.xaml.cs] Updating UI Current P Core Frequency {args[1]}");
+                    _model.PCoreFreq = double.Parse(args[1]);
+                    PCoresFreqSlider.Value = _model.PCoreFreq;
+                    break;
+                case "e-core-freq":
+                    Trace.WriteLine($"[MainPage.xaml.cs] Updating UI Current E Core Frequency {args[1]}");
+                    _model.ECoreFreq = double.Parse(args[1]);
+                    ECoresFreqSlider.Value = _model.ECoreFreq;
                     break;
             }
         }
@@ -464,6 +496,23 @@ namespace Tooth
                     Label3.Text = "Nearest Neighbor";
                     Label2.Visibility = Visibility.Collapsed;
                     break;
+            }
+        }
+
+        private void ProcessorSchedulingPolicySelector_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            // handle Xe Low Latency selection changes
+            if (sender is ComboBox combo && combo.SelectedItem is ComboBoxItem item)
+            {
+                // Extract the Tag (0, 1, or 2)
+                if (item.Tag is double tagValue)
+                {
+                    if (DataContext is MainPageModelWrapper model)
+                    {
+                        _model.SchedulingPolicy = tagValue;
+                        _model.SetSchedulingPolicyVar(tagValue);
+                    }
+                }
             }
         }
     }
