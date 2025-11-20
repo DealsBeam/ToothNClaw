@@ -79,7 +79,7 @@ namespace Tooth.Backend
             if (!_server.IsConnected || message == null)
                 return;
 
-            Console.WriteLine($"[Connection] Sent: {message}");
+            //Console.WriteLine($"[Connection] Sent: {message}");
             _writer.WriteLine(message);
             _writer.Flush();
         }

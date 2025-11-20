@@ -16,8 +16,10 @@ namespace Tooth.Backend
             { "Gamma", 1.0 },
             { "Hue", 0.0 },
             { "Saturation", 50.0 },
+            { "ScalingMode", 0},
             { "MaxPCoresFrequency", (uint)5100 },
             { "MaxECoresFrequency", (uint)3800 },
+            { "SchedulingPolicy", 0 },
         };
 
         /// <summary>

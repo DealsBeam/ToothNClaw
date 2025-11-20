@@ -164,6 +164,7 @@ namespace Tooth.Backend
         private Timer _enforceTimer;
         private uint _expectedPcoreMax;
         private uint _expectedEcoreMax;
+        private int _expectedSchedulingPolicy;
 
         private int _isTimerRunning = 0; // prevents overlap
 
@@ -172,6 +173,8 @@ namespace Tooth.Backend
         {
             _expectedPcoreMax = SettingsManager.Get<uint>("MaxPCoresFrequency");
             _expectedEcoreMax = SettingsManager.Get<uint>("MaxECoresFrequency");
+            _expectedSchedulingPolicy = SettingsManager.Get<int>("SchedulingPolicy");
+
 
             // relaxed interval: 3 second (3000 ms)
             _enforceTimer = new Timer(TimerCallback, null, 3000, 3000);
@@ -187,9 +190,11 @@ namespace Tooth.Backend
             {
                 _expectedPcoreMax = SettingsManager.Get<uint>("MaxPCoresFrequency");
                 _expectedEcoreMax = SettingsManager.Get<uint>("MaxECoresFrequency");
+                _expectedSchedulingPolicy = SettingsManager.Get<int>("SchedulingPolicy");
 
                 SetMaxPCoresFrequency(_expectedPcoreMax);
                 SetMaxECoresFrequency(_expectedEcoreMax);
+                RequestSchedulingPolicyMode((SchedulingPolicyMode)_expectedSchedulingPolicy);
             }
             catch
             {
@@ -363,6 +368,12 @@ namespace Tooth.Backend
 
                 // Get value set for this mode
                 var set = SchedulingPolicyMappings.Map[mode];
+
+                if (mode != (SchedulingPolicyMode)_expectedSchedulingPolicy)
+                {
+                    SettingsManager.Set("SchedulingPolicy", (int)mode);
+                    _expectedSchedulingPolicy = SettingsManager.Get<int>("SchedulingPolicy");
+                }
 
                 // 2. Apply all 3 settings (AC/DC identical)
                 WritePowerValue(activeScheme, ProcessorGroupGuidConst, CPUSchedulePolicyGuidConst, set.Policy);

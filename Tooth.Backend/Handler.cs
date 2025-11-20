@@ -604,6 +604,7 @@ namespace Tooth.Backend
                     break;
                 case "get-Scaling":
                     {
+                        /*
                         if (intelGPUController == null)
                         {
                             intelGPUController = new IntelGPU();
@@ -652,6 +653,11 @@ namespace Tooth.Backend
                                     break;
                             }
                         }
+                        */
+
+                        int scalingMode = SettingsManager.Get<int>("ScalingMode");
+                        Console.WriteLine($"[Server Handler] Responding with Scaling Mode {scalingMode}");
+                        (sender as Communication).Send($"Scaling" + ' ' + $"{scalingMode}");
                     }
                     break;
 
@@ -666,6 +672,7 @@ namespace Tooth.Backend
                         // Set GPU Scaling
                         int scaling = int.Parse(args[1]);
                         Console.WriteLine($"[Server Handler] Setting Scaling Value Received is {args[1]}");
+                        SettingsManager.Set("ScalingMode", scaling);
                         switch (scaling)
                         {
                             case (int)ScalingModeMethod.DISPLAY_SCALING_MAINTAIN_ASPECT_RATIO:
@@ -751,13 +758,11 @@ namespace Tooth.Backend
 
                 case "get-scheduling-policy":
                     {
-                        if (cpuBoostController == null)
-                        {
-                            cpuBoostController = new CpuBoostController();
-                        }
-                        Console.WriteLine($"[Server Handler] Responding with scheduling policy {cpuBoostController.getSchedulingPolicyMode().ToString()}");
+                        int schedulingPolicy = Convert.ToInt32(SettingsManager.Get<int>("SchedulingPolicy"));
 
-                        (sender as Communication).Send("scheduling-policy" + ' ' + (int)cpuBoostController.getSchedulingPolicyMode());
+                        Console.WriteLine($"[Server Handler] Responding with scheduling policy {schedulingPolicy}");
+
+                        (sender as Communication).Send("scheduling-policy" + ' ' + schedulingPolicy);
                     }
                     break;
                 case "set-scheduling-policy":
@@ -823,10 +828,6 @@ namespace Tooth.Backend
 
                 case "get-e-core-freq":
                     {
-                        if (cpuBoostController == null)
-                        {
-                            cpuBoostController = new CpuBoostController();
-                        }
                         int freq = Convert.ToInt32(SettingsManager.Get<uint>("MaxECoresFrequency"));
                         Console.WriteLine($"[Server Handler] Responding with E Core Frequency {freq.ToString()}");
 
